@@ -11,6 +11,7 @@ git update-index --assume-unchanged db_config.py
 # (so you don't accidentally commit your password)
 python -m venv .venv
 source ./venv/bin/activate
+# On Windows, use .venv\Scripts\activate.bat instead
 pip install -r requirements.txt
 flask run
 ```
