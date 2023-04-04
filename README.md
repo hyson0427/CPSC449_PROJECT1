@@ -1,1 +1,16 @@
 # CPSC449_PROJECT1
+
+## Installing
+
+```bash
+git clone https://github.com/hyson0427/CPSC449_PROJECT1.git
+cd CPSC449_PROJECT1
+# Edit db_config.py here to match your database settings
+git update-index --assume-unchanged db_config.py
+# Update git to ignore changes to db_config.py
+# (so you don't accidentally commit your password)
+python -m venv .venv
+source ./venv/bin/activate
+pip install -r requirements.txt
+flask run
+```
