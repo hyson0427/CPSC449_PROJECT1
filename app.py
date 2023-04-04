@@ -5,13 +5,15 @@
 import pymysql
 from flask import Flask, render_template
 
+from db_config import MYSQL_DB, MYSQL_HOST, MYSQL_PASSWORD, MYSQL_USER
+
 app = Flask(__name__)
 
 conn = pymysql.connect(
-    host="localhost",
-    user="root",
-    password="password",
-    db="449_db_project1",
+    host=MYSQL_HOST,
+    user=MYSQL_USER,
+    password=MYSQL_PASSWORD,
+    db=MYSQL_DB,
     cursorclass=pymysql.cursors.DictCursor,  # type: ignore
 )
 cur = conn.cursor()
