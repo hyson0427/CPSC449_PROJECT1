@@ -4,10 +4,16 @@
 # -Connect your Flask with the Database ( MySQL preferably )
 import pymysql
 from flask import Flask, render_template
+from flask_bcrypt import Bcrypt
 
 from db_config import MYSQL_DB, MYSQL_HOST, MYSQL_PASSWORD, MYSQL_USER
+from routes.auth import auth_blueprint
 
 app = Flask(__name__)
+
+# Initialize and store bcrypt
+bcrypt = Bcrypt(app)
+app.config["BCRYPT"] = bcrypt
 
 conn = pymysql.connect(
     host=MYSQL_HOST,
@@ -16,7 +22,14 @@ conn = pymysql.connect(
     db=MYSQL_DB,
     cursorclass=pymysql.cursors.DictCursor,  # type: ignore
 )
-cur = conn.cursor()
+curr = conn.cursor()
+
+# Register the DB in app.config so we can use it in blueprints
+app.config["DB_CONN"] = conn
+app.config["DB_CURSOR"] = curr
+
+# Register all blueprints
+app.register_blueprint(auth_blueprint)
 
 
 @app.route("/")
@@ -29,7 +42,7 @@ def hello_world():
 # error messages and status codes
 # -Create error handles for ex. 400, 401, 404, 500 and any other errors
 # that you feel are necessary
-# -Make sure that error messages are returned in a consistenet format
+# -Make sure that error messages are returned in a consistent format
 @app.errorhandler(400)
 def bad_request(e):
     return render_template("400.html"), 400
