@@ -1,6 +1,6 @@
 import pymysql.cursors
 from flask import Blueprint, current_app, jsonify, request
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 
 auth_blueprint = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -83,6 +83,12 @@ def register():
     # Generate and return the JWT token
     jwt_token = create_access_token(identity=username)
     return jsonify({"access_token": jwt_token}), 201
+
+
+@auth_blueprint.route("/user_info", methods=["POST"])
+@jwt_required()
+def user_info():
+    return jsonify({"user": get_jwt_identity()}), 200
 
 
 def user_exists(username: str, cursor: pymysql.cursors.Cursor) -> bool:
