@@ -20,6 +20,36 @@ def initialize():
     conn.commit()
 
 
+@auth_blueprint.route("/login", methods=["POST"])
+def login():
+    cursor = current_app.config["DB_CURSOR"]
+
+    if not request.is_json or not request.json:
+        return jsonify({"msg": "JSON is missing or invalid."}), 400
+
+    username = request.json.get("username")
+    password = request.json.get("password")
+
+    # Missing username/password
+    if not username or not password:
+        return jsonify({"msg": "Username or password is missing."}), 400
+
+    # Check if the user exists
+    if not user_exists(username, cursor):
+        return jsonify({"msg": "User does not exist."}), 400
+
+    # Check if the password is correct
+    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    user = cursor.fetchone()
+    bcrypt = current_app.config["BCRYPT"]
+    if not bcrypt.check_password_hash(user["password"], password):
+        return jsonify({"msg": "Incorrect password."}), 400
+
+    # Generate and return the JWT token
+    jwt_token = create_access_token(identity=username)
+    return jsonify({"access_token": jwt_token}), 200
+
+
 @auth_blueprint.route("/register", methods=["POST"])
 def register():
     cursor = current_app.config["DB_CURSOR"]
