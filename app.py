@@ -5,11 +5,15 @@
 import pymysql
 from flask import Flask, render_template
 from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager
 
 from db_config import MYSQL_DB, MYSQL_HOST, MYSQL_PASSWORD, MYSQL_USER
+from jwt_config import JWT_SECRET_KEY
 from routes.auth import auth_blueprint
 
 app = Flask(__name__)
+app.config["JWT_SECRET_KEY"] = JWT_SECRET_KEY
+jwt = JWTManager(app)
 
 # Initialize and store bcrypt
 bcrypt = Bcrypt(app)
