@@ -10,6 +10,7 @@ from flask_jwt_extended import JWTManager
 from db_config import MYSQL_DB, MYSQL_HOST, MYSQL_PASSWORD, MYSQL_USER
 from jwt_config import JWT_SECRET_KEY
 from routes.auth import auth_blueprint
+from routes.file import file_blueprint
 
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = JWT_SECRET_KEY
@@ -34,6 +35,7 @@ app.config["DB_CURSOR"] = curr
 
 # Register all blueprints
 app.register_blueprint(auth_blueprint)
+app.register_blueprint(file_blueprint)
 
 
 @app.route("/")
