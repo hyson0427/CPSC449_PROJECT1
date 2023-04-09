@@ -2,6 +2,8 @@
 # -Create a new Flask application and set up the necessary packages and modules
 # -Create a virtual environment for the application
 # -Connect your Flask with the Database ( MySQL preferably )
+import os
+
 import pymysql
 from flask import Flask, render_template
 from flask_bcrypt import Bcrypt
@@ -12,6 +14,7 @@ from jwt_config import JWT_SECRET_KEY
 from routes.auth import auth_blueprint
 from routes.file import file_blueprint
 
+# Initialize the app and JWTManager
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = JWT_SECRET_KEY
 jwt = JWTManager(app)
@@ -20,6 +23,7 @@ jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 app.config["BCRYPT"] = bcrypt
 
+# Initialize pymysql and connect to the database
 conn = pymysql.connect(
     host=MYSQL_HOST,
     user=MYSQL_USER,
@@ -32,6 +36,16 @@ curr = conn.cursor()
 # Register the DB in app.config so we can use it in blueprints
 app.config["DB_CONN"] = conn
 app.config["DB_CURSOR"] = curr
+
+# Register file handling configuration
+app.config["FILE_MAX_LENGTH"] = 1024 * 1024
+app.config["FILE_VALID_EXTENSIONS"] = [".jpg", ".png", ".gif"]
+app.config["FILE_UPLOAD_PATH"] = os.path.join(
+    os.path.dirname(__file__), "static", "files"
+)
+
+# Create path if it doesn't exist
+os.makedirs(app.config["FILE_UPLOAD_PATH"], exist_ok=True)
 
 # Register all blueprints
 app.register_blueprint(auth_blueprint)
