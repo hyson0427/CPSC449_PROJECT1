@@ -41,12 +41,18 @@ def login():
     # Check if the password is correct
     cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
     user = cursor.fetchone()
+
+    # Get the user id from the database so we can add it to the JWT token
+    user_id = user["id"]
+
     bcrypt = current_app.config["BCRYPT"]
     if not bcrypt.check_password_hash(user["password"], password):
         return jsonify({"msg": "Incorrect password."}), 400
 
     # Generate and return the JWT token
-    jwt_token = create_access_token(identity=username)
+    jwt_token = create_access_token(
+        identity=username, additional_claims={"user_id": user_id}
+    )
     return jsonify({"access_token": jwt_token}), 200
 
 
@@ -80,8 +86,13 @@ def register():
     )
     conn.commit()
 
+    # Get the user id from the database so we can add it to the JWT token
+    user_id = cursor.lastrowid
+
     # Generate and return the JWT token
-    jwt_token = create_access_token(identity=username)
+    jwt_token = create_access_token(
+        identity=username, additional_claims={"user_id": user_id}
+    )
     return jsonify({"access_token": jwt_token}), 201
 
 
