@@ -99,6 +99,7 @@ def download(user_id, timestamp):
     file_name = str(timestamp)
     full_path = os.path.join(upload_path, file_name)
 
+    # User specified a file that doesn't exist
     if not os.path.exists(full_path):
         return jsonify("File does not exist"), 404
 
@@ -110,10 +111,12 @@ def download(user_id, timestamp):
     )
     row = cursor.fetchone()
 
+    # For some reason the file isn't present in the database, return an error
     if row is None:
         return jsonify("File not found in database"), 404
     user_filename = row[0]
 
+    # Send the file using the original (sanitized) filename
     return send_from_directory(
         upload_path, file_name, as_attachment=True, attachment_filename=user_filename
     )
