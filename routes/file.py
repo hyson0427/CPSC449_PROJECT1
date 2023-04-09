@@ -1,7 +1,7 @@
 import os
 import time
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, send_from_directory
 from flask_jwt_extended import get_jwt, jwt_required
 from werkzeug.utils import secure_filename
 
@@ -71,7 +71,15 @@ def upload():
             (user_id, user_filename, timestamp),
         )
         conn.commit()
-        return jsonify("File uploaded successfully"), 200
+        return (
+            jsonify(
+                "File uploaded successfully.\n"
+                + "It can be downloaded from http://<host>/download/{user_id}/{timestamp}\n"
+                + "You may share this link with others; anyone with the link"
+                + " may download the file."
+            ),
+            200,
+        )
 
     # For some reason the file isn't present on disk, return an error
     return jsonify(f"Server error while saving file {user_filename}."), 500
@@ -85,6 +93,27 @@ def upload():
     # return jsonify("File uploaded successfully"), 200
 
 
-@file_blueprint.route("/download/<int:user_id>/<string:timestamp>")
+@file_blueprint.route("/download/<int:user_id>/<int:timestamp>", methods=["GET"])
 def download(user_id, timestamp):
-    return jsonify("File not found"), 404
+    upload_path = os.path.join(current_app.config["FILE_UPLOAD_PATH"], str(user_id))
+    file_name = str(timestamp)
+    full_path = os.path.join(upload_path, file_name)
+
+    if not os.path.exists(full_path):
+        return jsonify("File does not exist"), 404
+
+    # Get the original filename from the database
+    cursor = current_app.config["DB_CURSOR"]
+    cursor.execute(
+        "SELECT filename FROM files WHERE user_id=%s AND timestamp=%s",
+        (user_id, timestamp),
+    )
+    row = cursor.fetchone()
+
+    if row is None:
+        return jsonify("File not found in database"), 404
+    user_filename = row[0]
+
+    return send_from_directory(
+        upload_path, file_name, as_attachment=True, attachment_filename=user_filename
+    )
