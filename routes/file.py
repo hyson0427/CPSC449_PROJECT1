@@ -21,6 +21,7 @@ def initialize():
                     user_id INTEGER,
                     filename TEXT,
                     timestamp BIGINT,
+                    public BOOLEAN DEFAULT FALSE,
                     FOREIGN KEY (user_id) REFERENCES users(id))"""
     )
     conn.commit()
@@ -41,6 +42,8 @@ def upload():
         return jsonify("No file uploaded"), 400
 
     uploaded_file = request.files["file"]
+    public_value = request.values.get("public", "false")  # Default to private files
+    is_public = 1 if public_value.lower() == "true" else 0
 
     # Error: filename is missing
     if not uploaded_file.filename:
@@ -78,8 +81,8 @@ def upload():
     # database and return success
     if os.path.exists(disk_filename):
         cursor.execute(
-            "INSERT INTO files (user_id, filename, timestamp) VALUES (%s, %s, %s)",
-            (user_id, user_filename, timestamp),
+            "INSERT INTO files (user_id, filename, timestamp, public) VALUES (%s, %s, %s, %s)",
+            (user_id, user_filename, timestamp, is_public),
         )
         conn.commit()
         return (
@@ -120,6 +123,29 @@ def download(user_id, timestamp):
     return send_from_directory(
         upload_path, file_name, as_attachment=True, download_name=user_filename
     )
+
+
+@file_blueprint.route("/list", methods=["GET"])
+def list():
+    cursor = current_app.config["DB_CURSOR"]
+    cursor.execute("SELECT * FROM files where public=TRUE")
+    all_results = cursor.fetchall()
+
+    if len(all_results) == 0:
+        return jsonify("No public files found"), 404
+
+    public_files = []
+
+    for result in all_results:
+        user_id = result["user_id"]
+        timestamp = result["timestamp"]
+        filename = result["filename"]
+        url = f"http://127.0.0.1:5000/file/download/{user_id}/{timestamp}"
+
+        file = {"filename": filename, "url": url}
+        public_files.append(file)
+
+    return jsonify(public_files), 200
 
 
 def file_already_uploaded(user_id, file_name, cursor: pymysql.cursors.Cursor) -> bool:
