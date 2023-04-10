@@ -1,6 +1,7 @@
 import os
 import time
 
+import pymysql.cursors
 from flask import Blueprint, current_app, jsonify, request, send_from_directory
 from flask_jwt_extended import get_jwt, jwt_required
 from werkzeug.utils import secure_filename
@@ -19,7 +20,7 @@ def initialize():
                     id INTEGER PRIMARY KEY AUTO_INCREMENT,
                     user_id INTEGER,
                     filename TEXT,
-                    timestamp INTEGER,
+                    timestamp BIGINT,
                     FOREIGN KEY (user_id) REFERENCES users(id))"""
     )
     conn.commit()
@@ -48,6 +49,16 @@ def upload():
     # Sanitize the filename
     user_filename = secure_filename(uploaded_file.filename)
 
+    # Check if the user has already uploaded a file with this name
+    if file_already_uploaded(user_id, user_filename, cursor):
+        existing_timestamp = get_file_timestamp(user_id, user_filename, cursor)
+        return (
+            jsonify(
+                f"File already uploaded. Download link: http://127.0.0.1:5000/file/download/{user_id}/{existing_timestamp}"
+            ),
+            400,
+        )
+
     # Create the user's directory if it doesn't exist
     user_dir = os.path.join(current_app.config["FILE_UPLOAD_PATH"], str(user_id))
     os.makedirs(user_dir, exist_ok=True)
@@ -73,24 +84,13 @@ def upload():
         conn.commit()
         return (
             jsonify(
-                "File uploaded successfully.\n"
-                + "It can be downloaded from http://<host>/download/{user_id}/{timestamp}\n"
-                + "You may share this link with others; anyone with the link"
-                + " may download the file."
+                f"Upload successful. Download link: http://127.0.0.1:5000/file/download/{user_id}/{timestamp}"
             ),
             200,
         )
 
     # For some reason the file isn't present on disk, return an error
     return jsonify(f"Server error while saving file {user_filename}."), 500
-
-    # if filename != '':
-    #     file_ext = os.path.splitext(filename)[1]
-    #     if file_ext not in app.config['UPLOAD_EXTENSIONS']:
-    #         abort(400)
-    #     uploaded_file.save(os.path.join(app.config['UPLOAD_PATH'], filename))
-    # return redirect(url_for('index'))
-    # return jsonify("File uploaded successfully"), 200
 
 
 @file_blueprint.route("/download/<int:user_id>/<int:timestamp>", methods=["GET"])
@@ -114,9 +114,32 @@ def download(user_id, timestamp):
     # For some reason the file isn't present in the database, return an error
     if row is None:
         return jsonify("File not found in database"), 404
-    user_filename = row[0]
+    user_filename = row["filename"]
 
     # Send the file using the original (sanitized) filename
     return send_from_directory(
-        upload_path, file_name, as_attachment=True, attachment_filename=user_filename
+        upload_path, file_name, as_attachment=True, download_name=user_filename
     )
+
+
+def file_already_uploaded(user_id, file_name, cursor: pymysql.cursors.Cursor) -> bool:
+    cursor.execute(
+        "SELECT COUNT(*) FROM files WHERE user_id=%s AND filename=%s",
+        (user_id, file_name),
+    )
+    result = cursor.fetchone()
+    count = result["COUNT(*)"]  # type: ignore
+
+    # If there is a result, count is > 0
+    return count > 0
+
+
+def get_file_timestamp(user_id, file_name, cursor: pymysql.cursors.Cursor) -> int:
+    cursor.execute(
+        "SELECT timestamp FROM files WHERE user_id=%s AND filename=%s",
+        (user_id, file_name),
+    )
+    result = cursor.fetchone()
+    timestamp = result["timestamp"]  # type: ignore
+
+    return timestamp
