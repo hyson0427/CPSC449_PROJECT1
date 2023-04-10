@@ -15,3 +15,9 @@ source ./venv/bin/activate
 pip install -r requirements.txt
 flask run
 ```
+
+## Endpoints
+
+The following endpoints are available:
+
+![Endpoints](img/endpoints.png)
