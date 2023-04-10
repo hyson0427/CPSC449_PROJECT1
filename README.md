@@ -1,6 +1,12 @@
 # CPSC449_PROJECT1
 
-## Installing
+## Group 10
+
+- HaYeon SON
+- Jimy Bombela
+- Matt Watkins
+
+## Installing & Running
 
 ```bash
 git clone https://github.com/hyson0427/CPSC449_PROJECT1.git
